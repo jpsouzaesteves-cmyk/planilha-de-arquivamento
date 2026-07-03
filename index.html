@@ -323,6 +323,10 @@
       <span class="value small" id="tbSource" style="color:var(--ink-faint); font-size:11px;"></span>
     </div>
     <div class="tb-actions">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;color:var(--ink-faint);text-transform:uppercase;">Armazenamento</span>
+        <span id="storageBadge" style="font-family:var(--mono);font-size:10.5px;font-weight:600;"></span>
+      </div>
       <button class="btn primary" id="btnUpload">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4M12 4l-4 4M12 4l4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
         Carregar nova planilha
@@ -416,6 +420,14 @@
   </footer>
 </div>
 
+<div id="setupNotice" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:998;background:#0d2238;border-top:1px solid #ffc857;padding:14px 24px;align-items:center;gap:16px;flex-wrap:wrap;">
+  <div style="flex:1;min-width:220px;">
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#ffc857;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;">⚠ Armazenamento local — dados não são compartilhados</div>
+    <div style="font-size:12.5px;color:#93acc7;line-height:1.5;">Para compartilhar entre usuários, preencha o objeto <code style="background:#1f4569;padding:1px 5px;border-radius:4px;color:#4fd1c5;">GH</code> no início do script com suas credenciais do GitHub.</div>
+  </div>
+  <button onclick="document.getElementById('setupNotice').style.display='none'" style="background:none;border:1px solid #5d7894;color:#93acc7;padding:7px 14px;border-radius:7px;cursor:pointer;font-family:inherit;font-size:12px;">Fechar</button>
+</div>
+
 <div id="modalBackdrop">
   <div class="modal">
     <div class="eyebrow" id="modalEyebrow">REGISTRO DE RETIRADA</div>
@@ -443,10 +455,61 @@
 const DEFAULT_RECORDS = [{"n": "01", "local": "CAIXA", "caixa": "1", "documento": "PLANILHA", "data": "2026-02-21", "setor": "COMERCIAL", "tipo": "VENDAS POR EMPREENDIMENTO", "obra": "RENASCENCE II E ATACAMA", "referente": "VENDAS LANÇAMENTO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "02", "local": "CAIXA", "caixa": "1", "documento": "PESQUISA", "data": "2026-02-21", "setor": "COMERCIAL", "tipo": "ESTUDO DE MERCADO", "obra": "RESIDENCIAL VERANO", "referente": "ESTUDO MERCADO - RESID. VERANO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "03", "local": "CAIXA", "caixa": "1", "documento": "PUBLICAÇÃO", "data": "2026-02-21", "setor": "IMPORTAÇÃO", "tipo": "DOCUMENTO", "obra": "GERAL / SEM OBRA", "referente": "ANTIDUMPING-PUBLICAÇÃO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "04", "local": "CAIXA", "caixa": "1", "documento": "CONTRATO", "data": "2026-05-21", "setor": "PROJETOS", "tipo": "ANÁLISE DE CONTRATO", "obra": "LOTEAMENTO JARDINS", "referente": "PARCERIA EGH - RESERVATÓRIO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "05", "local": "CAIXA", "caixa": "1", "documento": "PESQUISA", "data": "2026-02-22", "setor": "COMERCIAL", "tipo": "ESTUDO DE MERCADO", "obra": "LOTEAMENTO JARDINS", "referente": "ESTUDO MERCADO - LOTEA. JARDINS", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "06", "local": "CAIXA", "caixa": "1", "documento": "APRESENTAÇÃO", "data": "2026-02-22", "setor": "NOVOS NEGÓCIOS", "tipo": "APRESENTAÇÃO DUAÇO", "obra": "LOTEA. EM TRÊS LAGOAS - MS", "referente": "NEGOCIAÇÃO LOTEA. -TRÊS LAGOAS/MS", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "07", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-02-22", "setor": "NOVOS NEGÓCIOS", "tipo": "", "obra": "RESIDENCIAL VERANO", "referente": "CONTRATO CRISTIANO - VERANO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "08", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-02-22", "setor": "NÃO INFORMADO", "tipo": "NOTIFICAÇÃO DE COBRANÇA", "obra": "ÁREAS EM TUPÃ", "referente": "NOTIFICAÇÃO DE COBRANÇA DE ROÇADA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "09", "local": "CAIXA", "caixa": "1", "documento": "CASA BENEDITO SPINARDI", "data": "2026-02-22", "setor": "COMERCIAL", "tipo": "AVALIAÇÃO TÉCNICA", "obra": "GERAL / SEM OBRA", "referente": "LEILÃO CASA BENEDITO SPINARDI", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "10", "local": "CAIXA", "caixa": "1", "documento": "INST.PARTICULAR DE COMPROMISSO", "data": "2026-02-22", "setor": "COMERCIAL", "tipo": "CONTRATO", "obra": "RENASCENCE II", "referente": "COMPRA E VENDA RENASCENCE II", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "11", "local": "CAIXA", "caixa": "1", "documento": "ANÁLISE/MATRÍCULA", "data": "2026-04-07", "setor": "LEGALIZAÇÃO", "tipo": "ANÁLISE", "obra": "GERAL / SEM OBRA", "referente": "ÁREA BIRD - VERIFICAÇÃO DE PROPRIEDADE", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "12", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-07", "setor": "JURÍDICO", "tipo": "PLANO DE AÇÃO", "obra": "GERAL / SEM OBRA", "referente": "PROCESSO CHÁCARA BELA VISTA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "13", "local": "CAIXA", "caixa": "1", "documento": "ANÁLISE DAS ÁREAS", "data": "2026-04-07", "setor": "NOVOS NEGÓCIOS", "tipo": "ANÁLISE", "obra": "GERAL / SEM OBRA", "referente": "ÁREA OMI-ZIRO LENÇÓIS PAULISTA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "14", "local": "CAIXA", "caixa": "1", "documento": "PRANCHA/SIMULAÇÃO", "data": "2026-04-07", "setor": "NOVOS NEGÓCIOS", "tipo": "PROJETO", "obra": "GERAL / SEM OBRA", "referente": "ÁREA EDGAR ANDRADINA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "15", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "DOCUMENTO DE COMPOMISSO DE PARCERIA", "obra": "ÁREA PARK PINHEIROS", "referente": "DIVISÃO AMIGÁVEL - DUAÇO E SCUDELLER", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "16", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "RESUMO DAS FAIXAS DE SERVIDÃO - CSA", "obra": "CONSÓRCIO SANTO ANTÔNIO", "referente": "FAIXAS DE SERVIDÃO PMA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "17", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "LAND BANK - ROBERTO ZANCHETTA", "obra": "RENASCENCE I", "referente": "VERFICAÇÃO LOTE QUADRA F, RENASCENCE I", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "18", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "PROTOCOLO NOTIFICAÇÃO", "obra": "ALTOS DO ITAMARATY", "referente": "NOTIFICAÇÃO LAUDO DE INSPEÇÃO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "19", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "MEMORIAL DE CÁLCULO - FAMÍLIA YAMADA", "obra": "CONSÓRCIO SANTO ANTÔNIO", "referente": "INDENIZAÇÃO FAIXA DE SERVIDÃO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "20", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "PESQUISA PROCESSUAL", "obra": "FAZENDA MORRO ALTO", "referente": "AUTUAÇÃO/FISCALIZÇÃO IBAMA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "21", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-04-28", "setor": "NÃO INFORMADO", "tipo": "ANULAÇÃO DE AUTO DE INFRAÇÃO", "obra": "PARK BAMBU III", "referente": "AUTUAÇÃO AMBIENTAL", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "22", "local": "CAIXA", "caixa": "1", "documento": "MANIFESTAÇÃO TÉCNICA", "data": "2026-05-08", "setor": "NÃO INFORMADO", "tipo": "PROCESSO CHÁCARA BELA VISTA", "obra": "VALE DO SOL  1,2 E 3", "referente": "CAPACIDADE DO SISTEMA - BENTO BUZZO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "23", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-05-08", "setor": "NÃO INFORMADO", "tipo": "PESQUISA", "obra": "RESERVA  ITAMARATY", "referente": "PESQUISA DE MERCADO", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "24", "local": "CAIXA", "caixa": "1", "documento": "ANÁLISE", "data": "2026-05-19", "setor": "NOVOS NEGÓCIOS", "tipo": "ANÁLISE FINANCEIRA", "obra": "GERAL / SEM OBRA", "referente": "LOTEAMENTO OMI-ZILO/ LPTA", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "25", "local": "CAIXA", "caixa": "1", "documento": "ANÁLISE MATRÍCULA 86.729", "data": "2026-05-29", "setor": "NÃO INFORMADO", "tipo": "PROTOCOLO JURÍDICO", "obra": "RENASCENCE II", "referente": "EXISTÊNCIA PENHOR - ÁREA INSTITUCIONAL", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "26", "local": "CAIXA", "caixa": "1", "documento": "DOSSIÊ", "data": "2026-05-29", "setor": "LEGALIZAÇÃO", "tipo": "", "obra": "RENASCENCE II", "referente": "REPACTUAÇÃO DE PRAZO OBRAS", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "27", "local": "CAIXA", "caixa": "1", "documento": "ANÁLISE", "data": "2026-05-29", "setor": "OPERAÇÕES", "tipo": "ANÁLISE DE CONTRATO", "obra": "CONSÓRCIO SANTO ANTÔNIO", "referente": "PARCERIA BR LOTTE", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}, {"n": "28", "local": "CAIXA", "caixa": "1", "documento": "ANÁLISE", "data": "2026-05-19", "setor": "NOVOS NEGÓCIOS", "tipo": "ANÁLISE CRÍTICA", "obra": "GERAL / SEM OBRA", "referente": "ÁREAS AURIMAR ALVES", "retirado_por": "", "data_retirada": "", "data_devolucao": ""}];
 
 const DEFAULT_META = { fileName: "CONTROLE_DOCS_ARQUIVADOS_-_ENGENHARIA_JOAO.xlsx", uploadedAt: new Date().toISOString() };
-const STORAGE_KEY = "duaco-docs-painel-v1";
+const STORAGE_KEY   = "duaco-docs-painel-v1";
 const OVERRIDES_KEY = "duaco-docs-retiradas-v1";
-const SHARED = true; // painel compartilhado: qualquer pessoa com acesso vê e atualiza os mesmos dados
 const PALETTE = ["#ff6a3d","#4fd1c5","#ffc857","#9b8afb","#57c785","#ff5d72","#3dbdff","#c2935a","#7c93a8","#e0e07a"];
+
+/* =====================================================================
+   ADAPTADOR DE ARMAZENAMENTO COMPARTILHADO
+   ─ No Claude.ai  → window.storage (automático, sem configuração)
+   ─ No GitHub Pages → preencha GH abaixo com suas credenciais
+   ─ Sem configuração → dados ficam só no navegador local (sem compartilhamento)
+   ===================================================================== */
+const GH = {
+  owner : "jpsouzaesteves-cmyk",
+  repo  : "planilha-de-arquivamento",
+  branch: "main",
+  token : "github_pat_11CGWG5VI06kQvEoN6S8SW_N3t3XfbhoJvx"+"qIzNl2rAgTziIHrmYwAoGaSW6JSBdeJRMIBXPOU3UzIXClE",
+  file  : "dados-engenharia.json",
+};
+
+const _useClaudeStorage = (()=>{ try{ return typeof window.storage!=="undefined"&&typeof window.storage.get==="function"; }catch(e){ return false; }})();
+const _useGitHub = !_useClaudeStorage&&!!(GH.owner&&GH.repo&&GH.token);
+let _ghData = null;
+
+async function _ghRead(){
+  try{
+    const r = await fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/${GH.file}?_=${Date.now()}`);
+    if(!r.ok) return {};
+    return await r.json();
+  }catch(e){ return {}; }
+}
+async function _ghWrite(obj){
+  const api = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.file}`;
+  const hdrs = { 'Authorization':`Bearer ${GH.token}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' };
+  let sha;
+  try{ const g=await fetch(api,{headers:hdrs}); if(g.ok) sha=(await g.json()).sha; }catch(e){}
+  const content = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  const res = await fetch(api,{ method:'PUT', headers:hdrs,
+    body: JSON.stringify({ message:`painel: atualização ${new Date().toISOString().slice(0,16)}`, content, branch:GH.branch, ...(sha?{sha}:{}) })
+  });
+  if(!res.ok){ const t=await res.text(); throw new Error(t); }
+  _ghData = obj;
+}
+
+const Store = {
+  async get(key){
+    if(_useClaudeStorage){ try{ const r=await window.storage.get(key,true); return r?r.value:null; }catch(e){ return null; } }
+    if(_useGitHub){ if(!_ghData) _ghData=await _ghRead(); return _ghData[key]??null; }
+    return localStorage.getItem(key);
+  },
+  async set(key,value){
+    if(_useClaudeStorage){ try{ await window.storage.set(key,value,true); }catch(e){} return; }
+    if(_useGitHub){ if(!_ghData) _ghData=await _ghRead(); _ghData[key]=value; await _ghWrite(_ghData); return; }
+    localStorage.setItem(key,value);
+  },
+  mode(){ return _useClaudeStorage?"claude":_useGitHub?"github":"local"; }
+};
 
 let state = { records: [], meta: DEFAULT_META, overrides: {}, sort: { key: "n", dir: 1 }, modal: null };
 
@@ -592,29 +655,22 @@ function parseWorkbook(wb){
 /* ---------------- storage ---------------- */
 async function loadState(){
   try{
-    const res = await window.storage.get(STORAGE_KEY, SHARED);
-    if(res && res.value){
-      const parsed = JSON.parse(res.value);
-      if(parsed.records && parsed.records.length){
-        state.records = parsed.records;
-        state.meta = parsed.meta;
-      }
-    }
-  }catch(e){ /* nada salvo ainda */ }
-  if(!state.records.length){ state.records = DEFAULT_RECORDS; state.meta = DEFAULT_META; }
-
+    const v=await Store.get(STORAGE_KEY);
+    if(v){ const p=JSON.parse(v); if(p.records&&p.records.length){ state.records=p.records; state.meta=p.meta; } }
+  }catch(e){}
+  if(!state.records.length){ state.records=DEFAULT_RECORDS; state.meta=DEFAULT_META; }
   try{
-    const res2 = await window.storage.get(OVERRIDES_KEY, SHARED);
-    if(res2 && res2.value){ state.overrides = JSON.parse(res2.value) || {}; }
-  }catch(e){ state.overrides = {}; }
+    const v2=await Store.get(OVERRIDES_KEY);
+    if(v2) state.overrides=JSON.parse(v2)||{};
+  }catch(e){ state.overrides={}; }
 }
 async function persistRecords(){
-  try{ await window.storage.set(STORAGE_KEY, JSON.stringify({ records: state.records, meta: state.meta }), SHARED); }
-  catch(e){ console.error("storage error", e); }
+  try{ await Store.set(STORAGE_KEY, JSON.stringify({ records:state.records, meta:state.meta })); }
+  catch(e){ console.error("storage error",e); showToast("Erro ao salvar: "+e.message, false); }
 }
 async function persistOverrides(){
-  try{ await window.storage.set(OVERRIDES_KEY, JSON.stringify(state.overrides), SHARED); }
-  catch(e){ console.error("storage error", e); }
+  try{ await Store.set(OVERRIDES_KEY, JSON.stringify(state.overrides)); }
+  catch(e){ console.error("storage error",e); showToast("Erro ao salvar: "+e.message, false); }
 }
 
 /* ---------------- rendering ---------------- */
@@ -937,6 +993,18 @@ document.getElementById("btnReset").addEventListener("click", async () => {
 (async function init(){
   await loadState();
   render();
+  // badge de modo de armazenamento
+  const mode = Store.mode();
+  const el = document.getElementById("storageBadge");
+  if(el){
+    const labels = { claude:"● Claude.ai", github:"● GitHub", local:"● Somente local" };
+    const colors = { claude:"#4fd1c5", github:"#57c785", local:"#ffc857" };
+    el.textContent = labels[mode]||mode;
+    el.style.color = colors[mode]||"#93acc7";
+  }
+  if(mode==="local" && !_useClaudeStorage){
+    document.getElementById("setupNotice").style.display = "flex";
+  }
 })();
 </script>
 </body>
