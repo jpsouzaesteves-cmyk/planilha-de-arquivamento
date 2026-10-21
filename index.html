@@ -469,12 +469,20 @@ const GH = {
   owner : "jpsouzaesteves-cmyk",
   repo  : "planilha-de-arquivamento",
   branch: "main",
-  token : "github_pat_11CGWG5VI06kQvEoN6S8SW_N3t3XfbhoJvx"+"qIzNl2rAgTziIHrmYwAoGaSW6JSBdeJRMIBXPOU3UzIXClE",
   file  : "dados-engenharia.json",
 };
+/* O token NÃO fica no código (a página é pública). Quem edita informa o token
+   uma vez; ele fica guardado só no navegador dessa pessoa. */
+const GH_TOKEN_KEY = "duaco-gh-token";
+function _ghToken(){ try{ return localStorage.getItem(GH_TOKEN_KEY)||""; }catch(e){ return ""; } }
+function _ghAskToken(msg){
+  const t = prompt((msg?msg+"\n\n":"")+"Para salvar alterações para todos, cole o token do GitHub (fine-grained, só este repositório, permissão Contents: read/write).\nEle fica guardado apenas neste navegador.");
+  if(t&&t.trim()){ try{ localStorage.setItem(GH_TOKEN_KEY,t.trim()); }catch(e){} return t.trim(); }
+  return "";
+}
 
 const _useClaudeStorage = (()=>{ try{ return typeof window.storage!=="undefined"&&typeof window.storage.get==="function"; }catch(e){ return false; }})();
-const _useGitHub = !_useClaudeStorage&&!!(GH.owner&&GH.repo&&GH.token);
+const _useGitHub = !_useClaudeStorage&&!!(GH.owner&&GH.repo);
 let _ghData = null;
 
 async function _ghRead(){
@@ -484,15 +492,22 @@ async function _ghRead(){
     return await r.json();
   }catch(e){ return {}; }
 }
-async function _ghWrite(obj){
+async function _ghWrite(obj, retry){
+  let token=_ghToken()||_ghAskToken();
+  if(!token) throw new Error("alteração não enviada ao GitHub (sem token). Ela ficou só neste navegador.");
   const api = `https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.file}`;
-  const hdrs = { 'Authorization':`Bearer ${GH.token}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' };
+  const hdrs = { 'Authorization':`Bearer ${token}`, 'Accept':'application/vnd.github+json', 'Content-Type':'application/json' };
   let sha;
-  try{ const g=await fetch(api,{headers:hdrs}); if(g.ok) sha=(await g.json()).sha; }catch(e){}
+  try{ const g=await fetch(api+`?ref=${GH.branch}&_=${Date.now()}`,{headers:hdrs,cache:'no-store'}); if(g.ok) sha=(await g.json()).sha; }catch(e){}
   const content = btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
   const res = await fetch(api,{ method:'PUT', headers:hdrs,
     body: JSON.stringify({ message:`painel: atualização ${new Date().toISOString().slice(0,16)}`, content, branch:GH.branch, ...(sha?{sha}:{}) })
   });
+  if(res.status===401||res.status===403){
+    try{ localStorage.removeItem(GH_TOKEN_KEY); }catch(e){}
+    if(!retry && _ghAskToken("O token do GitHub foi recusado (expirado ou sem permissão).")) return _ghWrite(obj,true);
+    throw new Error("token do GitHub recusado. A alteração ficou só neste navegador.");
+  }
   if(!res.ok){ const t=await res.text(); throw new Error(t); }
   _ghData = obj;
 }
@@ -505,7 +520,7 @@ const Store = {
   },
   async set(key,value){
     if(_useClaudeStorage){ try{ await window.storage.set(key,value,true); }catch(e){} return; }
-    if(_useGitHub){ if(!_ghData) _ghData=await _ghRead(); _ghData[key]=value; await _ghWrite(_ghData); return; }
+    if(_useGitHub){ try{ localStorage.setItem(key,value); }catch(e){} if(!_ghData) _ghData=await _ghRead(); const next={..._ghData,[key]:value}; await _ghWrite(next); return; }
     localStorage.setItem(key,value);
   },
   mode(){ return _useClaudeStorage?"claude":_useGitHub?"github":"local"; }
