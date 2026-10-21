@@ -514,6 +514,15 @@ async function _ghWrite(obj, retry){
   });
   if(res.status===401||res.status===403||res.status===404){
     try{ localStorage.removeItem(GH_TOKEN_KEY); }catch(e){}
+    let gm=""; try{ gm=(await res.clone().json()).message||""; }catch(e){}
+    const motivo = res.status===401
+      ? "O GitHub diz que o token é INVÁLIDO (revogado, regenerado ou copiado errado). Copie o token atual de novo."
+      : res.status===403
+      ? "O token é válido, mas está SEM PERMISSÃO DE ESCRITA. No GitHub, edite o token: Repository permissions → Contents → Read and write."
+      : "O token não tem acesso ao repositório "+GH.repo+". No GitHub, edite o token e marque este repositório.";
+    alert(motivo+(gm?"\n\n(GitHub: "+gm+" · código "+res.status+")":""));
+    if(!retry && _ghAskToken("Cole o token corrigido (ou Cancelar).")) return _ghWrite(obj,true);
+    throw new Error(motivo);
     if(res.status===404 && !retry && _ghAskToken("Este token não tem acesso ao repositório "+GH.repo+".")) return _ghWrite(obj,true);
     if(res.status===404) throw new Error("o token não tem acesso a este repositório ("+GH.repo+"). A alteração ficou só neste navegador.");
     if(!retry && _ghAskToken("O token do GitHub foi recusado (expirado ou sem permissão).")) return _ghWrite(obj,true);
