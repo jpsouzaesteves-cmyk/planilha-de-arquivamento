@@ -486,11 +486,15 @@ const _useGitHub = !_useClaudeStorage&&!!(GH.owner&&GH.repo);
 let _ghData = null;
 
 async function _ghRead(){
-  try{
-    const r = await fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/${GH.file}?_=${Date.now()}`);
-    if(!r.ok) return {};
-    return await r.json();
-  }catch(e){ return {}; }
+  const api=`https://api.github.com/repos/${GH.owner}/${GH.repo}/contents/${GH.file}?ref=${GH.branch}&_=${Date.now()}`;
+  const tok=_ghToken();
+  const tries=[
+    ()=>fetch(api,{cache:'no-store',headers:{'Accept':'application/vnd.github.raw+json',...(tok?{'Authorization':`Bearer ${tok}`}:{})}}),
+    ()=>fetch(api,{cache:'no-store',headers:{'Accept':'application/vnd.github.raw+json'}}),
+    ()=>fetch(`https://raw.githubusercontent.com/${GH.owner}/${GH.repo}/${GH.branch}/${GH.file}?_=${Date.now()}`,{cache:'no-store'}),
+  ];
+  for(const t of tries){ try{ const r=await t(); if(r.ok) return await r.json(); if(r.status===404) return {}; }catch(e){} }
+  return {};
 }
 async function _ghWrite(obj, retry){
   let token=_ghToken()||_ghAskToken();
@@ -503,12 +507,17 @@ async function _ghWrite(obj, retry){
   const res = await fetch(api,{ method:'PUT', headers:hdrs,
     body: JSON.stringify({ message:`painel: atualização ${new Date().toISOString().slice(0,16)}`, content, branch:GH.branch, ...(sha?{sha}:{}) })
   });
-  if(res.status===401||res.status===403){
+  if(res.status===401||res.status===403||res.status===404){
     try{ localStorage.removeItem(GH_TOKEN_KEY); }catch(e){}
+    if(res.status===404 && !retry && _ghAskToken("Este token não tem acesso ao repositório "+GH.repo+".")) return _ghWrite(obj,true);
+    if(res.status===404) throw new Error("o token não tem acesso a este repositório ("+GH.repo+"). A alteração ficou só neste navegador.");
     if(!retry && _ghAskToken("O token do GitHub foi recusado (expirado ou sem permissão).")) return _ghWrite(obj,true);
     throw new Error("token do GitHub recusado. A alteração ficou só neste navegador.");
   }
-  if(!res.ok){ const t=await res.text(); throw new Error(t); }
+  if(res.status===404){
+    throw new Error("o token não tem acesso a este repositório ("+GH.repo+"). Gere um token incluindo este repositório, com Contents: Read and write.");
+  }
+  if(!res.ok){ let t=""; try{ t=(await res.json()).message||""; }catch(e){} throw new Error("GitHub recusou a gravação ("+res.status+(t?": "+t:"")+")."); }
   _ghData = obj;
 }
 
@@ -599,7 +608,7 @@ function showToast(msg, ok=true){
   t.querySelector("svg").style.color = ok ? "var(--good)" : "var(--bad)";
   t.classList.add("show");
   clearTimeout(window.__toastTimer);
-  window.__toastTimer = setTimeout(()=>t.classList.remove("show"), 3800);
+  window.__toastTimer = setTimeout(()=>t.classList.remove("show"), ok ? 3800 : 10000);
 }
 
 /* ---------------- parsing uploaded workbook ---------------- */
@@ -680,12 +689,12 @@ async function loadState(){
   }catch(e){ state.overrides={}; }
 }
 async function persistRecords(){
-  try{ await Store.set(STORAGE_KEY, JSON.stringify({ records:state.records, meta:state.meta })); }
-  catch(e){ console.error("storage error",e); showToast("Erro ao salvar: "+e.message, false); }
+  try{ await Store.set(STORAGE_KEY, JSON.stringify({ records:state.records, meta:state.meta })); return true; }
+  catch(e){ console.error("storage error",e); showToast("NÃO SALVO para todos: "+e.message, false); return false; }
 }
 async function persistOverrides(){
-  try{ await Store.set(OVERRIDES_KEY, JSON.stringify(state.overrides)); }
-  catch(e){ console.error("storage error",e); showToast("Erro ao salvar: "+e.message, false); }
+  try{ await Store.set(OVERRIDES_KEY, JSON.stringify(state.overrides)); return true; }
+  catch(e){ console.error("storage error",e); showToast("NÃO SALVO para todos: "+e.message, false); return false; }
 }
 
 /* ---------------- rendering ---------------- */
@@ -877,9 +886,9 @@ function closeModal(){
 }
 async function clearOverride(key){
   delete state.overrides[key];
-  await persistOverrides();
+  const __ok = await persistOverrides();
   render();
-  showToast("Registro de retirada removido.", true);
+  if(__ok) showToast("Registro de retirada removido.", true);
 }
 
 document.getElementById("modalCancel").addEventListener("click", closeModal);
@@ -901,17 +910,17 @@ document.getElementById("modalForm").addEventListener("submit", async (e) => {
     if(!nome){ showToast("Informe o nome de quem retirou o documento.", false); return; }
     const data_retirada = document.getElementById("fldDataRetirada").value;
     state.overrides[key] = { ...(state.overrides[key]||{}), retirado_por: nome, data_retirada, data_devolucao: "" };
-    await persistOverrides();
+    const __ok = await persistOverrides();
     closeModal();
     render();
-    showToast(`Retirada registrada para ${nome}.`, true);
+    if(__ok) showToast(`Retirada registrada para ${nome}.`, true);
   } else if(mode === "return"){
     const data_devolucao = document.getElementById("fldDataDevolucao").value;
     state.overrides[key] = { ...(state.overrides[key]||{}), data_devolucao };
-    await persistOverrides();
+    const __ok = await persistOverrides();
     closeModal();
     render();
-    showToast("Devolução registrada.", true);
+    if(__ok) showToast("Devolução registrada.", true);
   }
 });
 
@@ -976,9 +985,9 @@ async function handleFile(file){
     }
     state.records = records;
     state.meta = { fileName: file.name, uploadedAt: new Date().toISOString() };
-    await persistRecords();
+    const __ok = await persistRecords();
     render();
-    showToast(`Planilha atualizada: ${records.length} documentos carregados. Os registros de retirada foram preservados.`, true);
+    if(__ok) showToast(`Planilha atualizada: ${records.length} documentos carregados. Os registros de retirada foram preservados.`, true);
   }catch(err){
     console.error(err);
     showToast("Erro ao ler a planilha. Confira o arquivo e tente novamente.", false);
@@ -998,10 +1007,9 @@ document.getElementById("btnReset").addEventListener("click", async () => {
   state.records = DEFAULT_RECORDS;
   state.meta = DEFAULT_META;
   state.overrides = {};
-  await persistRecords();
-  await persistOverrides();
+  const __ok = (await persistRecords()) & (await persistOverrides());
   render();
-  showToast("Dados originais restaurados.", true);
+  if(__ok) showToast("Dados originais restaurados.", true);
 });
 
 /* ---------------- init ---------------- */
