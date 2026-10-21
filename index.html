@@ -474,11 +474,16 @@ const GH = {
 /* O token NÃO fica no código (a página é pública). Quem edita informa o token
    uma vez; ele fica guardado só no navegador dessa pessoa. */
 const GH_TOKEN_KEY = "duaco-gh-token";
-function _ghToken(){ try{ return localStorage.getItem(GH_TOKEN_KEY)||""; }catch(e){ return ""; } }
+function _cleanToken(t){ return String(t||"").replace(/[^A-Za-z0-9_]/g,""); }
+function _validToken(t){ return /^(github_pat_|ghp_|gho_|ghu_|ghs_)[A-Za-z0-9_]{20,}$/.test(t); }
+function _ghToken(){ try{ const t=_cleanToken(localStorage.getItem(GH_TOKEN_KEY)); if(_validToken(t)) return t; localStorage.removeItem(GH_TOKEN_KEY); }catch(e){} return ""; }
 function _ghAskToken(msg){
   const t = prompt((msg?msg+"\n\n":"")+"Para salvar alterações para todos, cole o token do GitHub (fine-grained, só este repositório, permissão Contents: read/write).\nEle fica guardado apenas neste navegador.");
-  if(t&&t.trim()){ try{ localStorage.setItem(GH_TOKEN_KEY,t.trim()); }catch(e){} return t.trim(); }
-  return "";
+  if(t===null) return "";
+  const c=_cleanToken(t);
+  if(!_validToken(c)){ alert("Isso não parece um token do GitHub. Ele deve começar com github_pat_ e ser copiado inteiro, sem espaços."); return ""; }
+  try{ localStorage.setItem(GH_TOKEN_KEY,c); }catch(e){}
+  return c;
 }
 
 const _useClaudeStorage = (()=>{ try{ return typeof window.storage!=="undefined"&&typeof window.storage.get==="function"; }catch(e){ return false; }})();
